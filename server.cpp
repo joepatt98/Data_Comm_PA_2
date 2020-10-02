@@ -1,18 +1,22 @@
 // Authors: Joseph Patterson and Stephanie Shisler
 // NetIDs: jhp232 and xxxxxx
 
+#include <stdlib.h>
+#include <cstring>
+#include <cstdlib>
 #include <iostream>
 #include <sys/types.h>   // defines types (like size_t)
 #include <sys/socket.h>  // defines socket class
 #include <netinet/in.h>  // defines port numbers for (internet) sockets, some address structures, and constants
-#include <time.h>        // used for random number generation
-#include <string.h>      // using this to convert random port integer to string
+#include <netdb.h>
 #include <fstream>
-#include <arpa/inet.h>
-#include <stdio.h>
+#include <arpa/inet.h>   // if you want to use inet_addr() function
+#include "packet.h"
+#include <math.h>
+#include <time.h>
+#include <string.h>
 #include <unistd.h>
 #include <vector>
-#include <stdlib.h>
 #include <sstream>
 
 using namespace std;
