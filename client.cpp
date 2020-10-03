@@ -69,6 +69,9 @@ int main(int argc, char *argv[]){
   string data_append;
   int seq_num = 0;
 
+  char payload[512];
+  vector <string> data_array;
+
   while (1) {
 
     if (chars_remaining == 0)
@@ -100,29 +103,81 @@ int main(int argc, char *argv[]){
 
     }
 
+    packet *spacket;
+    char* data = (char*)f_contents.c_str();
+    spacket = new packet(1, 0, 30, data);
+
+    memset(payload, 0, sizeof(payload));
+    spacket->serialize(payload);
+
+    data_array.push_back((string)payload);
+
     seq_num++;
 
     if (seq_num > 7)
       seq_num = 0;
 
-  }
+  } //end while loop
 
-
-  char payload[512];
-  vector <string> data_array;
-  packet *spacket;
-  char* data = (char*)f_contents.c_str();
-  spacket = new packet(1,0,30,data);
+  packet *eot_packet;
+  int len = 0;
+  char* data = NULL;
+  eot_packet = new packet(3, seq_num, len, data);
 
   memset(payload,0,sizeof(payload));
-  spacket->serialize(payload);
+  eot_packet->serialize(payload);
 
   data_array.push_back((string)payload);
 
+  for (i = 0; i < sizeof(data_array); i++) {
 
+    memset(payload,0,sizeof(payload));
+    strcpy(payload, data_array[i].c_str());
 
+    if (sendto(mysocket, payload, sizeof(payload), 0,
+      (struct sockaddr *) &server, slen) == -1) {
 
+          cout << "Error in sendto function.\n";
 
+    }
+
+    packet *sn_packet = new packet(0, 0, 0, payload);
+    sn_packet->deserialize(payload);
+
+    ofstream file("clientseqnum.log");
+    file << sn_packet->getSeqNum() << endl;
+
+    memset(payload,0,sizeof(payload));
+    int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0, (sockaddr*)&server, &slen);
+
+    if (bytes_received > 0) {
+
+        char recv_buf[512];
+        strcpy(recv_buf, payload);
+
+        packet *rpacket = new packet(0, 0, 0, payload);
+        rpacket->deserialize(payload);
+
+        packet *sn_packet = new packet(0, 0, 0, recv_buf);
+
+        if (rpacket->getType() == 0 || rpacket->getType() == 2) {
+
+          sn_packet->deserialize(recv_buf);
+          ofstream file("clientack.log");
+          file << sn_packet->getSeqNum() << endl;
+          break;
+
+        }
+
+    }
+
+    else {
+
+      cout << "Failed to receive.\n";
+
+    }
+
+} // end for loop
 
   close(mysocket);
 
