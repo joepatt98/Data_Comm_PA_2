@@ -37,65 +37,13 @@ int main(int argc, char *argv[]){
   int mysocket = 0;
   socklen_t clen = sizeof(client);
 
-  // ********************** Stage #1 ********************** //
-
-  char n_payload[512] = "";
-
-  // sets up TCP socket for handshake
-  if ((mysocket = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-    cout << "Error in creating TCP socket.\n";
-
-  memset((char *) &server, 0, sizeof(server));
-  server.sin_family = AF_INET;
-  server.sin_port = htons(n_port);
-  server.sin_addr.s_addr = htonl(INADDR_ANY);
-  if (bind(mysocket, (struct sockaddr *)&server, sizeof(server)) == -1)
-    cout << "Error in binding.\n";
-
-  int backlog = 10;
-  listen(mysocket, backlog);
-
-  int new_socket = accept(mysocket, (struct sockaddr *)&client, &clen);
-
-  int len, bytes_sent, bytes_received;
-  len = strlen(n_payload);
-  bytes_received = recv(new_socket, n_payload, 512, 0);
-
-  //cout << "Number of bytes received: " << bytes_received << endl;
-  if (bytes_received == -1)
-    cout << "Error in receive function.\n";
-
-  int min = 1024;
-  int max = 65535;
-  srand(time(0));
-  int r_port = rand() % (max - min) + min;
-  cout << "Handshake Detected. Selected the random port " << r_port << endl;
-
-  // Now we send the new r_port to the client so it knows what port to continue on.
-  stringstream sss;
-  sss << r_port;
-  string r_payload;
-  sss >> r_payload; //to_string(r_port);
-  len = strlen(r_payload.c_str());
-  bytes_sent = send(new_socket, r_payload.c_str(), len, 0);
-
-  //cout << "Sending Random Port... " << r_payload << endl;
-  //cout << "Number of bytes sent: " << bytes_sent << endl;
-  if (bytes_sent == -1)
-    cout << "Error in send function.\n";
-
-  close(mysocket);
-  close(new_socket);
-
-  // ********************** Stage #2 ********************** //
-
   // sets up UDP socket for file transmission
   if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1)
     cout << "Error in creating UDP socket.\n";
 
   memset((char *) &server, 0, sizeof(server));
   server.sin_family = AF_INET;
-  server.sin_port = htons(r_port);
+  server.sin_port = htons(n_port);
   server.sin_addr.s_addr = htonl(INADDR_ANY);
   if (bind(mysocket, (struct sockaddr *)&server, sizeof(server)) == -1)
     cout << "Error in binding.\n";

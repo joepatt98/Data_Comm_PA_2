@@ -61,22 +61,68 @@ int main(int argc, char *argv[]){
   while ( file >> c ) f_contents += c;
   file.close();
 
-  char f_payload[f_contents.size() + 1];
-	strcpy(f_payload, f_contents.c_str());
-  char * spacket;
-  packet packet(1, 0, 30, f_payload);
-  memset(spacket, 0, sizeof(packet));
-  packet.serialize(spacket);
+  int character_len = f_contents.size();
+  int length_of_payload = 0;
 
-  packet.printContents();
+  int i = 0;
+  int chars_remaining = character_len - i;
+  string data_append;
+  int seq_num = 0;
 
-  if (sendto(mysocket, &packet, sizeof(packet), 0, (struct sockaddr *)&server, slen)==-1)
-    cout << "Error in sendto function.\n";
+  while (1) {
 
-  char ack[4];
+    if (chars_remaining == 0)
+      break;
 
-  recvfrom(mysocket, ack, 4, 0, (struct sockaddr *)&server, &slen);
-  cout << ack << endl;
+    if (chars_remaining >= 30) {
+
+      while (i < 30) {
+
+        data_append += f_contents[i];
+        i++;
+
+      }
+
+      length_of_payload = 30;
+
+    }
+
+    else {
+
+      while (i < chars_remaining) {
+
+        data_append += f_contents[i];
+        i++;
+
+      }
+
+      length_of_payload = chars_remaining;
+
+    }
+
+    seq_num++;
+
+    if (seq_num > 7)
+      seq_num = 0;
+
+  }
+
+
+  char payload[512];
+  vector <string> data_array;
+  packet *spacket;
+  char* data = (char*)f_contents.c_str();
+  spacket = new packet(1,0,30,data);
+
+  memset(payload,0,sizeof(payload));
+  spacket->serialize(payload);
+
+  data_array.push_back((string)payload);
+
+
+
+
+
 
   close(mysocket);
 
