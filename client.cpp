@@ -64,7 +64,7 @@ int main(int argc, char *argv[]){
   int character_len = f_contents.size();
   f_contents.erase(character_len - 1);
   character_len -= 1;
-  string data_append;
+
   int seq_num = 0;
 
   cout << "Character Count: " << character_len << "\n";
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]){
   while (1) {
 
     int length_of_payload = 0;
-
+    string data_append;
     int i = 0;
     int chars_remaining = character_len - counter;
 
@@ -118,9 +118,8 @@ int main(int argc, char *argv[]){
       cout << "Sequence Number: " << seq_num << "\n";
       cout << "--------------------------------------------------\n\n";
 
-      packet *spacket;
-      char* data = (char*)f_contents.c_str();
-      spacket = new packet(1, 0, 30, data);
+      char* data = (char*)data_append.c_str();
+      packet *spacket = new packet(1, seq_num, length_of_payload, data);
 
       memset(payload, 0, sizeof(payload));
       spacket->serialize(payload);
@@ -144,10 +143,10 @@ int main(int argc, char *argv[]){
 
   data_array.push_back((string)payload);
 
-  for (int i = 0; i < sizeof(data_array); i++) {
+  for (int i = 0; i < data_array.size(); i++) {
 
     memset(payload,0,sizeof(payload));
-    strcpy(payload, data_array[i].c_str());
+    strcpy(payload,data_array[i].c_str());
 
     if (sendto(mysocket, payload, sizeof(payload), 0,
       (struct sockaddr *) &server, slen) == -1) {
@@ -159,15 +158,16 @@ int main(int argc, char *argv[]){
     packet *sn_packet = new packet(0, 0, 0, payload);
     sn_packet->deserialize(payload);
 
-    ofstream file("clientseqnum.log");
+    ofstream file("clientseqnum.log", ios_base::out | ios_base::app);
     file << sn_packet->getSeqNum() << endl;
 
     memset(payload,0,sizeof(payload));
     int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0, (sockaddr*)&server, &slen);
 
+    char recv_buf[512];
+
     if (bytes_received > 0) {
 
-        char recv_buf[512];
         strcpy(recv_buf, payload);
 
         packet *rpacket = new packet(0, 0, 0, payload);
@@ -175,13 +175,25 @@ int main(int argc, char *argv[]){
 
         packet *sn_packet = new packet(0, 0, 0, recv_buf);
 
-        if (rpacket->getType() == 0 || rpacket->getType() == 2) {
+        switch(rpacket->getType()){
 
-          sn_packet->deserialize(recv_buf);
-          ofstream file("clientack.log");
-          file << sn_packet->getSeqNum() << endl;
-          break;
+            case 0: {
 
+              sn_packet->deserialize(recv_buf);
+              ofstream file("clientack.log", ios_base::out | ios_base::app);
+              file << (sn_packet->getSeqNum()) << endl;
+              continue;
+
+            }
+
+            case 2: {
+
+              sn_packet->deserialize(recv_buf);
+              ofstream file("clientack.log", ios_base::out | ios_base::app);
+              file << (sn_packet->getSeqNum()) << endl;
+              break;
+
+            }
         }
 
     }
