@@ -1,5 +1,5 @@
 // Authors: Joseph Patterson and Stephanie Shisler
-// NetIDs: jhp232 and xxxxxx
+// NetIDs: jhp232 and sas880
 
 #include <stdlib.h>
 #include <cstring>
@@ -62,60 +62,75 @@ int main(int argc, char *argv[]){
   file.close();
 
   int character_len = f_contents.size();
-  int length_of_payload = 0;
-
-  int i = 0;
-  int chars_remaining = character_len - i;
+  f_contents.erase(character_len - 1);
+  character_len -= 1;
   string data_append;
   int seq_num = 0;
 
+  cout << "Character Count: " << character_len << "\n";
+  cout << "All characters: " << f_contents << "\n";
+
   char payload[512];
   vector <string> data_array;
-
+  int counter = 0;
   while (1) {
 
-    if (chars_remaining == 0)
-      break;
+    int length_of_payload = 0;
 
-    if (chars_remaining >= 30) {
+    int i = 0;
+    int chars_remaining = character_len - counter;
 
-      while (i < 30) {
+      if (chars_remaining == 0)
+        break;
 
-        data_append += f_contents[i];
-        i++;
+      if (chars_remaining >= 30) {
 
-      }
+        while (i < 30) {
 
-      length_of_payload = 30;
+          data_append += f_contents[counter];
+          i++;
+          counter++;
 
-    }
+        }
 
-    else {
-
-      while (i < chars_remaining) {
-
-        data_append += f_contents[i];
-        i++;
+        length_of_payload = 30;
 
       }
 
-      length_of_payload = chars_remaining;
+      else {
 
-    }
+        while (i < chars_remaining) {
 
-    packet *spacket;
-    char* data = (char*)f_contents.c_str();
-    spacket = new packet(1, 0, 30, data);
+          data_append += f_contents[counter];
+          i++;
+          counter++;
 
-    memset(payload, 0, sizeof(payload));
-    spacket->serialize(payload);
+        }
 
-    data_array.push_back((string)payload);
+        length_of_payload = chars_remaining;
 
-    seq_num++;
+      }
 
-    if (seq_num > 7)
-      seq_num = 0;
+      cout << "End to counter difference: " << chars_remaining << "\n";
+      cout << "Length: " << length_of_payload << "\n";
+      cout << "Character count: " << character_len << "\n";
+      cout << "Counter: " << counter << "\n";
+      cout << "Sequence Number: " << seq_num << "\n";
+      cout << "--------------------------------------------------\n\n";
+
+      packet *spacket;
+      char* data = (char*)f_contents.c_str();
+      spacket = new packet(1, 0, 30, data);
+
+      memset(payload, 0, sizeof(payload));
+      spacket->serialize(payload);
+
+      data_array.push_back((string)payload);
+
+      seq_num++;
+
+      if (seq_num > 7)
+        seq_num = 0;
 
   } //end while loop
 
@@ -129,7 +144,7 @@ int main(int argc, char *argv[]){
 
   data_array.push_back((string)payload);
 
-  for (i = 0; i < sizeof(data_array); i++) {
+  for (int i = 0; i < sizeof(data_array); i++) {
 
     memset(payload,0,sizeof(payload));
     strcpy(payload, data_array[i].c_str());
@@ -182,4 +197,5 @@ int main(int argc, char *argv[]){
   close(mysocket);
 
   return 0;
+
 }

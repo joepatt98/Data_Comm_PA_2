@@ -1,5 +1,5 @@
 // Authors: Joseph Patterson and Stephanie Shisler
-// NetIDs: jhp232 and xxxxxx
+// NetIDs: jhp232 and sas880
 
 #include <stdlib.h>
 #include <cstring>
@@ -29,13 +29,16 @@ int main(int argc, char *argv[]){
   ss << argList[1];
   int n_port;
   ss >> n_port;
-  //int n_port = stoi(argList[1]);
+
+  char filename[512];
+  strcpy(filename, argList[2].c_str());
 
   struct sockaddr_in server;
   struct sockaddr_in client;
 
   int mysocket = 0;
   socklen_t clen = sizeof(client);
+  socklen_t slen = sizeof(server);
 
   // sets up UDP socket for file transmission
   if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1)
@@ -48,36 +51,81 @@ int main(int argc, char *argv[]){
   if (bind(mysocket, (struct sockaddr *)&server, sizeof(server)) == -1)
     cout << "Error in binding.\n";
 
-  char s_payload[4];
+  ofstream arrival_log("arrival.log", ios_base::out | ios_base::trunc);
+  arrival_log.close();
 
-  if (recvfrom(mysocket, s_payload, 4, 0, (struct sockaddr *)&client, &clen)==-1)
-    cout << "Failed to receive.\n";
+  char payload[512];
+  string f_payload = "";
 
-  //cout << "Received size of file:\n" << s_payload << endl;
+  while (1) {
 
-  stringstream ssss;
-  ssss << s_payload;
-  int f_payload_size;
-  ssss >> f_payload_size;
-  //int f_payload_size = stoi(s_payload);
-  char f_payload[f_payload_size];
+      memset(payload,0,sizeof(payload));
 
-  if (recvfrom(mysocket, f_payload, f_payload_size, 0, (struct sockaddr *)&client, &clen)==-1)
-    cout << "Failed to receive.\n";
+      int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0,
+        (struct sockaddr *) &client, &clen);
 
-  //cout << "Received file:\n" << f_payload << endl;
+      if (bytes_received > 0) {
 
-  ofstream file("dataReceived.txt");
+          packet *rcv_packet = new packet(0, 0 , 30, payload);
+          rcv_packet->deserialize(payload);
+
+          ofstream arrival_log("arrival.log", ios_base::out | ios_base::app);
+          arrival_log << rcv_packet->getSeqNum() << endl;
+
+          if (rcv_packet->getType() == 1) {
+
+              f_payload += rcv_packet->getData();
+
+              packet *spacket = new packet(0,rcv_packet->getSeqNum(),0,NULL);
+
+              memset(payload,0,sizeof(payload));
+              spacket->serialize(payload);
+
+              if (sendto(mysocket, payload, sizeof(payload), 0,
+                (struct sockaddr *) &client, clen) == -1) {
+
+                    cout << "Error in sendto function.\n";
+
+              }
+
+              break;
+
+          }
+
+          if (rcv_packet->getType() == 3) {
+
+              packet *spacket = new packet(2,rcv_packet->getSeqNum(),0,NULL);
+
+              memset(payload,0,sizeof(payload));
+              spacket->serialize(payload);
+
+              if (sendto(mysocket, payload, sizeof(payload), 0,
+                (struct sockaddr *) &client, clen) == -1) {
+
+                    cout << "Error in sendto function.\n";
+
+              }
+
+              break;
+
+          }
+
+      }
+
+      else {
+
+          cout << "Failed to receive.\n";
+
+      }
+
+  } // end while loop
+
+  ofstream file(filename);
   file << f_payload;
   file.close();
-
-  //char ack[512] = "Got all that data, thanks!";
-
-  if (sendto(mysocket, f_payload, f_payload_size, 0, (struct sockaddr *)&client, clen)==-1){
-    cout << "Error in sendto function.\n";
-  }
 
   close(mysocket);
 
   return 0;
+
 }
