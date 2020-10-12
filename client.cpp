@@ -55,24 +55,25 @@ int main(int argc, char *argv[]){
 	s->h_length);
 
   char c;
-  string f_contents;
+  string file_contents;
   ifstream file(filename);
   file >> noskipws;
-  while ( file >> c ) f_contents += c;
+  while ( file >> c ) file_contents += c;
   file.close();
 
-  int character_len = f_contents.size();
-  f_contents.erase(character_len - 1);
+  int character_len = file_contents.size();
+  file_contents.erase(character_len - 1);
   character_len -= 1;
 
   int seq_num = 0;
 
   cout << "Character Count: " << character_len << "\n";
-  cout << "All characters: " << f_contents << "\n";
+  cout << "All characters: " << file_contents << "\n";
 
   char payload[512];
   vector <string> data_array;
   int counter = 0;
+
   while (1) {
 
     int length_of_payload = 0;
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]){
 
         while (i < 30) {
 
-          data_append += f_contents[counter];
+          data_append += file_contents[counter];
           i++;
           counter++;
 
@@ -101,7 +102,7 @@ int main(int argc, char *argv[]){
 
         while (i < chars_remaining) {
 
-          data_append += f_contents[counter];
+          data_append += file_contents[counter];
           i++;
           counter++;
 

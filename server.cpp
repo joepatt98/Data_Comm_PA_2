@@ -55,10 +55,10 @@ int main(int argc, char *argv[]){
   arrival_log.close();
 
   char payload[512];
-  string f_payload = "";
-  int fileout;
-  bool isDone = true;
-  while (isDone) {
+  string payload_data = "";
+  bool continue_loop = true;
+
+  while (continue_loop) {
 
       memset(payload,0,sizeof(payload));
 
@@ -77,22 +77,22 @@ int main(int argc, char *argv[]){
 
               case 1: {
 
-                f_payload += rcv_packet->getData();
+                payload_data += rcv_packet->getData();
 
                 packet *spacket;
                 spacket = new packet(0,rcv_packet->getSeqNum(),0,NULL);
 
-                // Serialize the ACK packet
                 memset(payload,0,sizeof(payload));
                 spacket->serialize(payload);
 
-                // Send ACK packet to emulator from server
-                //elen = sizeof(emulator);
-                fileout = sendto(mysocket, payload, sizeof(payload), 0, (struct sockaddr *)&client, clen);
-                if (fileout < 0) {cout << "Could not send to server\n";
-                exit(1);
+                if (sendto(mysocket, payload, sizeof(payload), 0,
+                  (struct sockaddr *) &client, clen) == -1) {
+
+                      cout << "Error in sendto function.\n";
+                      exit(1);
+
                 }
-                //isDone = false;
+
                 break;
 
               }
@@ -102,18 +102,18 @@ int main(int argc, char *argv[]){
                 packet *spacket;
                 spacket = new packet(2,rcv_packet->getSeqNum(),0,NULL);
 
-                // Serialize the EOT packet
                 memset(payload,0,sizeof(payload));
                 spacket->serialize(payload);
 
-                // Send EOT packet to emulator from server
-                //elen = sizeof(emulator);
-                fileout = sendto(mysocket, payload, sizeof(payload), 0, (struct sockaddr *)&client, clen);
-                if (fileout < 0) {
-                    cout << "Could not send to server\n";
-                    exit(1);
+                if (sendto(mysocket, payload, sizeof(payload), 0,
+                  (struct sockaddr *) &client, clen) == -1) {
+
+                      cout << "Error in sendto function.\n";
+                      exit(1);
+
                 }
-                isDone = false;
+
+                continue_loop = false;
                 break;
 
               }
@@ -121,52 +121,15 @@ int main(int argc, char *argv[]){
               default: {
 
                   cout << "Error Occurred\n";
-                  isDone = false;
+                  continue_loop = false;
                   break;
 
               }
-              isDone = false;
+
+              continue_loop = false;
               break;
 
           }
-          /*
-          if (rcv_packet->getType() == 1) {
-
-              f_payload += rcv_packet->getData();
-
-              packet *spacket = new packet(0,rcv_packet->getSeqNum(),0,NULL);
-
-              memset(payload,0,sizeof(payload));
-              spacket->serialize(payload);
-
-              if (sendto(mysocket, payload, sizeof(payload), 0,
-                (struct sockaddr *) &client, clen) == -1) {
-
-                    cout << "Error in sendto function.\n";
-
-              }
-
-              break;
-
-          }
-
-          if (rcv_packet->getType() == 3) {
-
-              packet *spacket = new packet(2,rcv_packet->getSeqNum(),0,NULL);
-
-              memset(payload,0,sizeof(payload));
-              spacket->serialize(payload);
-
-              if (sendto(mysocket, payload, sizeof(payload), 0,
-                (struct sockaddr *) &client, clen) == -1) {
-
-                    cout << "Error in sendto function.\n";
-
-              }
-
-              break;
-
-          }*/
 
       }
 
@@ -179,7 +142,7 @@ int main(int argc, char *argv[]){
   } // end while loop
 
   ofstream file(filename);
-  file << f_payload;
+  file << payload_data;
   file.close();
 
   close(mysocket);
