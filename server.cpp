@@ -41,18 +41,25 @@ int main(int argc, char *argv[]){
   socklen_t slen = sizeof(server);
 
   // sets up UDP socket for file transmission
-  if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1)
+  if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1) {
+
     cout << "Error in creating UDP socket.\n";
+    exit(1);
+
+  }
 
   memset((char *) &server, 0, sizeof(server));
   server.sin_family = AF_INET;
   server.sin_port = htons(n_port);
   server.sin_addr.s_addr = htonl(INADDR_ANY);
-  if (bind(mysocket, (struct sockaddr *)&server, sizeof(server)) == -1)
+  if (bind(mysocket, (struct sockaddr *)&server, sizeof(server)) == -1) {
+
     cout << "Error in binding.\n";
+    exit(1);
+
+  }
 
   ofstream arrival_log("arrival.log", ios_base::out | ios_base::trunc);
-  arrival_log.close();
 
   char payload[512];
   string payload_data = "";
@@ -70,7 +77,6 @@ int main(int argc, char *argv[]){
           packet *rcv_packet = new packet(0, 0 , 30, payload);
           rcv_packet->deserialize(payload);
 
-          ofstream arrival_log("arrival.log", ios_base::out | ios_base::app);
           arrival_log << rcv_packet->getSeqNum() << endl;
 
           switch (rcv_packet->getType()) {
@@ -136,14 +142,17 @@ int main(int argc, char *argv[]){
       else {
 
           cout << "Failed to receive.\n";
+          exit(1);
 
       }
 
   } // end while loop
 
-  ofstream file(filename);
-  file << payload_data;
-  file.close();
+  ofstream output_file(filename);
+  output_file << payload_data;
+  output_file.close();
+
+  arrival_log.close();
 
   close(mysocket);
 

@@ -44,8 +44,12 @@ int main(int argc, char *argv[]){
   socklen_t slen = sizeof(server);
 
   // sets up UDP socket for file transmission
-  if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1)
+  if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1) {
+
     cout << "Error in creating UDP socket.\n";
+    exit(1);
+
+  }
 
   memset((char *) &server, 0, sizeof(server));
   server.sin_family = AF_INET;
@@ -61,14 +65,13 @@ int main(int argc, char *argv[]){
   while ( file >> c ) file_contents += c;
   file.close();
 
-  int character_len = file_contents.size();
-  file_contents.erase(character_len - 1);
-  character_len -= 1;
-
   int seq_num = 0;
+  int string_len = file_contents.size();
+  file_contents.erase(string_len - 1);
+  string_len -= 1;
 
-  cout << "Character Count: " << character_len << "\n";
-  cout << "All characters: " << file_contents << "\n";
+  ofstream seqnum_log("clientseqnum.log", ios_base::out | ios_base::trunc);
+  ofstream ack_log("clientack.log", ios_base::out | ios_base::trunc);
 
   char payload[512];
   vector <string> data_array;
@@ -76,13 +79,16 @@ int main(int argc, char *argv[]){
 
   while (1) {
 
-    int length_of_payload = 0;
-    string data_append;
-    int i = 0;
-    int chars_remaining = character_len - counter;
+      int length_of_payload = 0;
+      string data_append;
+      int i = 0;
+      int chars_remaining = string_len - counter;
 
-      if (chars_remaining == 0)
+      if (chars_remaining == 0) {
+
         break;
+
+      }
 
       if (chars_remaining >= 30) {
 
@@ -112,20 +118,13 @@ int main(int argc, char *argv[]){
 
       }
 
-      cout << "End to counter difference: " << chars_remaining << "\n";
-      cout << "Length: " << length_of_payload << "\n";
-      cout << "Character count: " << character_len << "\n";
-      cout << "Counter: " << counter << "\n";
-      cout << "Sequence Number: " << seq_num << "\n";
-      cout << "--------------------------------------------------\n\n";
-
       char* data = (char*)data_append.c_str();
-      packet *spacket = new packet(1, seq_num, length_of_payload, data);
+      packet *spacket = new packet(1, seq_num, length_of_payload + 7, data);
 
       memset(payload, 0, sizeof(payload));
       spacket->serialize(payload);
 
-      data_array.push_back((string)payload);
+      data_array.push_back(payload);
 
       seq_num++;
 
@@ -142,7 +141,7 @@ int main(int argc, char *argv[]){
   memset(payload,0,sizeof(payload));
   eot_packet->serialize(payload);
 
-  data_array.push_back((string)payload);
+  data_array.push_back(payload);
 
   for (int i = 0; i < data_array.size(); i++) {
 
@@ -153,14 +152,14 @@ int main(int argc, char *argv[]){
       (struct sockaddr *) &server, slen) == -1) {
 
           cout << "Error in sendto function.\n";
+          exit(1);
 
     }
 
     packet *sn_packet = new packet(0, 0, 0, payload);
     sn_packet->deserialize(payload);
 
-    ofstream file("clientseqnum.log", ios_base::out | ios_base::app);
-    file << sn_packet->getSeqNum() << endl;
+    seqnum_log << sn_packet->getSeqNum() << endl;
 
     memset(payload,0,sizeof(payload));
     int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0, (sockaddr*)&server, &slen);
@@ -176,13 +175,12 @@ int main(int argc, char *argv[]){
 
         packet *sn_packet = new packet(0, 0, 0, recv_buf);
 
-        switch(rpacket->getType()){
+        switch(rpacket->getType()) {
 
             case 0: {
 
               sn_packet->deserialize(recv_buf);
-              ofstream file("clientack.log", ios_base::out | ios_base::app);
-              file << (sn_packet->getSeqNum()) << endl;
+              ack_log << (sn_packet->getSeqNum()) << endl;
               continue;
 
             }
@@ -190,11 +188,11 @@ int main(int argc, char *argv[]){
             case 2: {
 
               sn_packet->deserialize(recv_buf);
-              ofstream file("clientack.log", ios_base::out | ios_base::app);
-              file << (sn_packet->getSeqNum()) << endl;
+              ack_log << (sn_packet->getSeqNum()) << endl;
               break;
 
             }
+
         }
 
     }
@@ -202,10 +200,14 @@ int main(int argc, char *argv[]){
     else {
 
       cout << "Failed to receive.\n";
+      exit(1);
 
     }
 
-} // end for loop
+  } // end for loop
+
+  seqnum_log.close();
+  ack_log.close();
 
   close(mysocket);
 
