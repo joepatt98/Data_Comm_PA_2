@@ -23,25 +23,13 @@ using namespace std;
 
 int main(int argc, char *argv[]){
 
-  vector <string> argList(argv, argv + argc);
-
-  char server_name[512];
-  strcpy(server_name, argList[1].c_str());
-
-  stringstream ss;
-  ss << argList[2];
-  int n_port;
-  ss >> n_port;
-
   char filename[512];
-  strcpy(filename, argList[3].c_str());
+  strcpy(filename, argv[4]);
 
   struct hostent *s;
-  s = gethostbyname(server_name);
+  s = gethostbyname(argv[1]);
 
-  struct sockaddr_in server;
   int mysocket = 0;
-  socklen_t slen = sizeof(server);
 
   // sets up UDP socket for file transmission
   if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1) {
@@ -51,12 +39,26 @@ int main(int argc, char *argv[]){
 
   }
 
-  memset((char *) &server, 0, sizeof(server));
-  server.sin_family = AF_INET;
-  server.sin_port = htons(n_port);
-  bcopy((char *)s->h_addr,
-	(char *)&server.sin_addr.s_addr,
-	s->h_length);
+  struct sockaddr_in client;
+  memset((char *) &client, 0, sizeof(client));
+  client.sin_family = AF_INET;
+  client.sin_port = htons(atoi(argv[3]));
+  bcopy((char *)s->h_addr, (char *)&client.sin_addr.s_addr, s->h_length);
+  socklen_t clen = sizeof(client);
+  if (bind(mysocket, (struct sockaddr *)&client, clen) == -1) {
+
+    cout << "Error in binding.\n";
+    exit(1);
+
+  }
+
+  struct sockaddr_in emulator;
+  memset((char *) &emulator, 0, sizeof(emulator));
+  emulator.sin_family = AF_INET;
+  emulator.sin_port = htons(atoi(argv[2]));
+  emulator.sin_addr.s_addr = htonl(INADDR_ANY);
+  bcopy((char *) s->h_addr, (char *) &emulator.sin_addr.s_addr, s->h_length);
+  socklen_t elen = sizeof(emulator);
 
   char c;
   string file_contents;
@@ -149,7 +151,7 @@ int main(int argc, char *argv[]){
     strcpy(payload,data_array[i].c_str());
 
     if (sendto(mysocket, payload, sizeof(payload), 0,
-      (struct sockaddr *) &server, slen) == -1) {
+      (struct sockaddr *) &emulator, elen) == -1) {
 
           cout << "Error in sendto function.\n";
           exit(1);
@@ -162,7 +164,7 @@ int main(int argc, char *argv[]){
     seqnum_log << sn_packet->getSeqNum() << endl;
 
     memset(payload,0,sizeof(payload));
-    int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0, (sockaddr*)&server, &slen);
+    int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0, (sockaddr*)&client, &clen);
 
     char recv_buf[512];
 

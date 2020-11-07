@@ -23,22 +23,13 @@ using namespace std;
 
 int main(int argc, char *argv[]){
 
-  vector <string> argList(argv, argv + argc);
-
-  stringstream ss;
-  ss << argList[1];
-  int n_port;
-  ss >> n_port;
-
   char filename[512];
-  strcpy(filename, argList[2].c_str());
+  strcpy(filename, argv[4]);
 
-  struct sockaddr_in server;
-  struct sockaddr_in client;
+  struct hostent *s;
+  s = gethostbyname(argv[1]);
 
   int mysocket = 0;
-  socklen_t clen = sizeof(client);
-  socklen_t slen = sizeof(server);
 
   // sets up UDP socket for file transmission
   if ((mysocket=socket(AF_INET, SOCK_DGRAM, 0))==-1) {
@@ -48,16 +39,26 @@ int main(int argc, char *argv[]){
 
   }
 
+  struct sockaddr_in server;
   memset((char *) &server, 0, sizeof(server));
   server.sin_family = AF_INET;
-  server.sin_port = htons(n_port);
+  server.sin_port = htons(atoi(argv[2]));
   server.sin_addr.s_addr = htonl(INADDR_ANY);
-  if (bind(mysocket, (struct sockaddr *)&server, sizeof(server)) == -1) {
+  socklen_t slen = sizeof(server);
+  if (bind(mysocket, (struct sockaddr *)&server, slen) == -1) {
 
     cout << "Error in binding.\n";
     exit(1);
 
   }
+
+  struct sockaddr_in emulator;
+  memset((char *) &emulator, 0, sizeof(emulator));
+  emulator.sin_family = AF_INET;
+  emulator.sin_port = htons(atoi(argv[3]));
+  emulator.sin_addr.s_addr = htonl(INADDR_ANY);
+  bcopy((char *) s->h_addr, (char *) &emulator.sin_addr.s_addr, s->h_length);
+  socklen_t elen = sizeof(emulator);
 
   ofstream arrival_log("arrival.log", ios_base::out | ios_base::trunc);
 
@@ -67,10 +68,10 @@ int main(int argc, char *argv[]){
 
   while (continue_loop) {
 
-      memset(payload,0,sizeof(payload));
+      memset(payload, 0, sizeof(payload));
 
       int bytes_received = recvfrom(mysocket, payload, sizeof(payload), 0,
-        (struct sockaddr *) &client, &clen);
+        (struct sockaddr *) &server, &slen);
 
       if (bytes_received > 0) {
 
@@ -92,7 +93,7 @@ int main(int argc, char *argv[]){
                 spacket->serialize(payload);
 
                 if (sendto(mysocket, payload, sizeof(payload), 0,
-                  (struct sockaddr *) &client, clen) == -1) {
+                  (struct sockaddr *) &emulator, elen) == -1) {
 
                       cout << "Error in sendto function.\n";
                       exit(1);
@@ -112,7 +113,7 @@ int main(int argc, char *argv[]){
                 spacket->serialize(payload);
 
                 if (sendto(mysocket, payload, sizeof(payload), 0,
-                  (struct sockaddr *) &client, clen) == -1) {
+                  (struct sockaddr *) &emulator, elen) == -1) {
 
                       cout << "Error in sendto function.\n";
                       exit(1);
