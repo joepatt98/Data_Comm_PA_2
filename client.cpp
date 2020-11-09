@@ -121,7 +121,7 @@ int main(int argc, char *argv[]){
       }
 
       char* data = (char*)data_append.c_str();
-      packet *spacket = new packet(1, seq_num, length_of_payload + 7, data);
+      packet *spacket = new packet(1, seq_num, length_of_payload, data);
 
       memset(payload, 0, sizeof(payload));
       spacket->serialize(payload);
